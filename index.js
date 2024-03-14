@@ -1,5 +1,6 @@
 const express = require("express");
 require("dotenv").config();
+const jwt = require("jsonwebtoken");
 const { MongoClient, ServerApiVersion, ObjectId } = require("mongodb");
 const cors = require("cors");
 
@@ -27,12 +28,54 @@ async function run() {
   const serviceCollection = client.db("doc-house").collection("services");
   const appoinmentCollection = client.db("doc-house").collection("appoinment");
 
+  /* MIDDLEWARE */
+
+  const verifyToken = (req, res, next) => {
+    const authorization = req.headers.authorization;
+    if (!authorization) {
+      return res
+        .status(401)
+        .send({ error: true, message: "Unauthorized Access" });
+    }
+
+    const token = authorization.split(" ")[1];
+    // console.log(token);
+    jwt.verify(token, process.env.SECRET_ACCESS_TOKEN, (err, decoded) => {
+      if (err) {
+        return res
+          .status(403)
+          .send({ error: true, message: "Forbidden Access" });
+      }
+      req.decoded = decoded;
+      next();
+    });
+  };
+
+  const verifyAdmin = async (req, res, next) => {
+    const email = req.decoded.email;
+    const query = { email: email };
+    const user = await usersCollection.findOne(query);
+    const isAdmin = user.role === "admin";
+    if (!isAdmin) {
+      res.status(403).send({ message: "Forbidden Access" });
+    }
+    next();
+  };
+
   try {
     // Connect the client to the server	(optional starting in v4.7)
     await client.connect();
 
     app.get("/", (req, res) => {
       res.send("Doc house portal news coming");
+    });
+
+    app.post("/jwt", async (req, res) => {
+      const user = req.body;
+      const token = jwt.sign(user, process.env.SECRET_ACCESS_TOKEN, {
+        expiresIn: "1h",
+      });
+      res.send({ token });
     });
 
     /* User's related api */
@@ -48,12 +91,12 @@ async function run() {
       res.send(result);
     });
 
-    app.get("/allUsers", async (req, res) => {
+    app.get("/allUsers", verifyToken, async (req, res) => {
       const user = await usersCollection.find().toArray();
       res.send(user);
     });
 
-    app.delete("/user/:id", async (req, res) => {
+    app.delete("/user/:id", verifyToken, async (req, res) => {
       const id = req.params.id;
       const query = { _id: new ObjectId(id) };
       const deleteUser = await usersCollection.deleteOne(query);
@@ -64,7 +107,7 @@ async function run() {
     -----------------*/
 
     /* admin related api */
-    app.post("/makeAdmin/:email", async (req, res) => {
+    app.patch("/makeAdmin/:email", verifyToken, async (req, res) => {
       const email = req.params.email;
       const filter = { email: email };
       const updatedDoc = {
@@ -75,6 +118,18 @@ async function run() {
       const update = await usersCollection.updateOne(filter, updatedDoc);
       res.send(update);
     });
+
+    app.get("/admin/:email", verifyToken, async (req, res) => {
+      const email = req.params.email;
+      if (req.decoded.email !== email) {
+        res.send({ admin: false });
+      }
+      const query = { email: email };
+      const user = await usersCollection.findOne(query);
+      const result = { admin: user?.role === "admin" };
+      res.send(result);
+    });
+
     /*----------------
             END
     -----------------*/
@@ -85,14 +140,14 @@ async function run() {
       res.send(doctors);
     });
 
-    app.delete("/doctor/:id", async (req, res) => {
+    app.delete("/doctor/:id", verifyToken, async (req, res) => {
       const id = req.params.id;
       const query = { _id: new ObjectId(id) };
       const deleteDoctor = await doctorsCollection.deleteOne(query);
       res.send(deleteDoctor);
     });
 
-    app.post("/doctor", async (req, res) => {
+    app.post("/doctor", verifyToken, async (req, res) => {
       const doctor = req.body;
       // console.log(doctor);
       const result = await doctorsCollection.insertOne(doctor);
@@ -110,18 +165,18 @@ async function run() {
 
     /* Appoinment related API */
 
-    app.post("/appoinment", async (req, res) => {
+    app.post("/appoinment", verifyToken, async (req, res) => {
       const appoinment = req.body;
       const result = await appoinmentCollection.insertOne(appoinment);
       res.send(result);
     });
 
-    app.get("/allAppoinment", async (req, res) => {
+    app.get("/allAppoinment", verifyToken, async (req, res) => {
       const result = await appoinmentCollection.find().toArray();
       res.send(result);
     });
 
-    app.get("/myAppoinments", async (req, res) => {
+    app.get("/myAppoinments", verifyToken, async (req, res) => {
       const email = req.query.email;
       const query = { email: email };
       const result = await appoinmentCollection.find(query).toArray();
