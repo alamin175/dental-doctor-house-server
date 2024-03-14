@@ -1,6 +1,6 @@
 const express = require("express");
 require("dotenv").config();
-const jwt = require("jsonwebtoken");
+var jwt = require("jsonwebtoken");
 const { MongoClient, ServerApiVersion, ObjectId } = require("mongodb");
 const cors = require("cors");
 
@@ -27,6 +27,9 @@ async function run() {
   const doctorsCollection = client.db("doc-house").collection("doctors");
   const serviceCollection = client.db("doc-house").collection("services");
   const appoinmentCollection = client.db("doc-house").collection("appoinment");
+  const expertDoctorsCollection = client
+    .db("doc-house")
+    .collection("expertDoctors");
 
   /* MIDDLEWARE */
 
@@ -64,7 +67,7 @@ async function run() {
 
   try {
     // Connect the client to the server	(optional starting in v4.7)
-    await client.connect();
+    // await client.connect();
 
     app.get("/", (req, res) => {
       res.send("Doc house portal news coming");
@@ -91,12 +94,12 @@ async function run() {
       res.send(result);
     });
 
-    app.get("/allUsers", verifyToken, async (req, res) => {
+    app.get("/allUsers", verifyToken, verifyAdmin, async (req, res) => {
       const user = await usersCollection.find().toArray();
       res.send(user);
     });
 
-    app.delete("/user/:id", verifyToken, async (req, res) => {
+    app.delete("/user/:id", verifyToken, verifyAdmin, async (req, res) => {
       const id = req.params.id;
       const query = { _id: new ObjectId(id) };
       const deleteUser = await usersCollection.deleteOne(query);
@@ -107,17 +110,22 @@ async function run() {
     -----------------*/
 
     /* admin related api */
-    app.patch("/makeAdmin/:email", verifyToken, async (req, res) => {
-      const email = req.params.email;
-      const filter = { email: email };
-      const updatedDoc = {
-        $set: {
-          role: "admin",
-        },
-      };
-      const update = await usersCollection.updateOne(filter, updatedDoc);
-      res.send(update);
-    });
+    app.patch(
+      "/makeAdmin/:email",
+      verifyToken,
+      verifyAdmin,
+      async (req, res) => {
+        const email = req.params.email;
+        const filter = { email: email };
+        const updatedDoc = {
+          $set: {
+            role: "admin",
+          },
+        };
+        const update = await usersCollection.updateOne(filter, updatedDoc);
+        res.send(update);
+      }
+    );
 
     app.get("/admin/:email", verifyToken, async (req, res) => {
       const email = req.params.email;
@@ -140,17 +148,30 @@ async function run() {
       res.send(doctors);
     });
 
-    app.delete("/doctor/:id", verifyToken, async (req, res) => {
+    app.delete("/doctor/:id", verifyToken, verifyAdmin, async (req, res) => {
       const id = req.params.id;
       const query = { _id: new ObjectId(id) };
       const deleteDoctor = await doctorsCollection.deleteOne(query);
       res.send(deleteDoctor);
     });
 
-    app.post("/doctor", verifyToken, async (req, res) => {
+    app.post("/doctor", verifyToken, verifyAdmin, async (req, res) => {
       const doctor = req.body;
       // console.log(doctor);
       const result = await doctorsCollection.insertOne(doctor);
+      res.send(result);
+    });
+
+    app.get("/expertDoctors", async (req, res) => {
+      const result = await expertDoctorsCollection.find().toArray();
+      res.send(result);
+    });
+
+    app.get("/doctorDetails/:id", async (req, res) => {
+      const id = req.params.id;
+      // console.log(id);
+      const query = { _id: new ObjectId(id) };
+      const result = await expertDoctorsCollection.findOne(query);
       res.send(result);
     });
 
@@ -158,7 +179,7 @@ async function run() {
             END
     -----------------*/
 
-    app.get("/services", async (req, res) => {
+    app.get("/services", verifyToken, async (req, res) => {
       const result = await serviceCollection.find().toArray();
       res.send(result);
     });
@@ -171,7 +192,7 @@ async function run() {
       res.send(result);
     });
 
-    app.get("/allAppoinment", verifyToken, async (req, res) => {
+    app.get("/allAppoinment", verifyToken, verifyAdmin, async (req, res) => {
       const result = await appoinmentCollection.find().toArray();
       res.send(result);
     });
