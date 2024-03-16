@@ -6,11 +6,26 @@ var jwt = require("jsonwebtoken");
 
 const cors = require("cors");
 
-const corsOptions = {
-  origin: "https://dental-doctor-house.web.app/",
-  credentials: true, //access-control-allow-credentials:true
-  optionSuccessStatus: 200,
-};
+const allowedOrigins = "https://dental-doctor-house.web.app";
+app.use(
+  cors({
+    origin: (origin, callBack) => {
+      if (!origin || allowedOrigins.indexOf(origin) !== -1) {
+        callBack(null, true);
+      } else {
+        callBack(new Error("Not Allowed By CORS"));
+      }
+    },
+    methods: ["GET", "POST", "PUT", "DELETE"],
+    credentials: true,
+  })
+);
+
+// const corsOptions = {
+//   origin: ["https://dental-doctor-house.web.app", "http://localhost:5000"],
+//   credentials: true, // access-control-allow-credentials:true
+//   optionSuccessStatus: 200,
+// };
 
 // app.use((req, res, next) => {
 //   res.setHeader("Access-Control-Allow-Origin", "*");
@@ -20,9 +35,8 @@ const corsOptions = {
 // });
 
 // using middleware
+
 // app.use(cors());
-// app.use(cors(corsOptions));
-app.use(cors(corsOptions));
 app.use(express.json());
 
 const port = process.env.PORT || 5000;
@@ -85,6 +99,10 @@ async function run() {
   try {
     // Connect the client to the server	(optional starting in v4.7)
     // await client.connect();
+
+    app.get("/", async (req, res) => {
+      await res.send(" Data are coming");
+    });
 
     app.post("/jwt", async (req, res) => {
       const user = req.body;
