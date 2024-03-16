@@ -6,37 +6,9 @@ var jwt = require("jsonwebtoken");
 
 const cors = require("cors");
 
-const allowedOrigins = "https://dental-doctor-house.web.app";
-app.use(
-  cors({
-    origin: (origin, callBack) => {
-      if (!origin || allowedOrigins.indexOf(origin) !== -1) {
-        callBack(null, true);
-      } else {
-        callBack(new Error("Not Allowed By CORS"));
-      }
-    },
-    methods: ["GET", "POST", "PUT", "DELETE"],
-    credentials: true,
-  })
-);
-
-// const corsOptions = {
-//   origin: ["https://dental-doctor-house.web.app", "http://localhost:5000"],
-//   credentials: true, // access-control-allow-credentials:true
-//   optionSuccessStatus: 200,
-// };
-
-// app.use((req, res, next) => {
-//   res.setHeader("Access-Control-Allow-Origin", "*");
-//   res.setHeader("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE");
-//   res.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization");
-//   next();
-// });
-
 // using middleware
 
-// app.use(cors());
+app.use(cors());
 app.use(express.json());
 
 const port = process.env.PORT || 5000;
@@ -58,6 +30,7 @@ async function run() {
   const doctorsCollection = client.db("doc-house").collection("doctors");
   const serviceCollection = client.db("doc-house").collection("services");
   const appoinmentCollection = client.db("doc-house").collection("appoinment");
+  const reviewsCollection = client.db("doc-house").collection("reviews");
   const expertDoctorsCollection = client
     .db("doc-house")
     .collection("expertDoctors");
@@ -237,6 +210,11 @@ async function run() {
     /*----------------
             END
     -----------------*/
+
+    app.get("/reviews", async (req, res) => {
+      const review = await reviewsCollection.find().toArray();
+      res.send(review);
+    });
   } finally {
     // await client.close();
   }
