@@ -22,7 +22,13 @@ const corsOptions = {
 // using middleware
 // app.use(cors());
 // app.use(cors(corsOptions));
-app.use(cors(corsOptions));
+app.use(
+  cors({
+    origin: "https://dental-doctor-house.web.app/", // Replace 'http://example.com' with the desired origin
+    credentials: true, // Optional: allows credentials (cookies, authorization headers) to be sent cross-origin
+  })
+);
+
 app.use(express.json());
 
 const port = process.env.PORT || 5000;
