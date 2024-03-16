@@ -7,7 +7,7 @@ var jwt = require("jsonwebtoken");
 const cors = require("cors");
 
 const corsOptions = {
-  origin: "http://localhost:5173/",
+  origin: "https://dental-doctor-house.web.app/",
   credentials: true, //access-control-allow-credentials:true
   optionSuccessStatus: 200,
 };
@@ -22,13 +22,7 @@ const corsOptions = {
 // using middleware
 // app.use(cors());
 // app.use(cors(corsOptions));
-app.use(
-  cors({
-    origin: "https://dental-doctor-house.web.app/", // Replace 'http://example.com' with the desired origin
-    credentials: true, // Optional: allows credentials (cookies, authorization headers) to be sent cross-origin
-  })
-);
-
+app.use(cors(corsOptions));
 app.use(express.json());
 
 const port = process.env.PORT || 5000;
